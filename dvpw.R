@@ -1,3 +1,5 @@
+library(rnaturalearth)
+library(rnaturalearthdata)
 library(pdftools)
 library(stringr)
 library(dplyr)
@@ -5,9 +7,9 @@ library(tidyverse)
 library(rvest)
 library(xml2)
 library(httr)
+library(tidygeocoder)
 
-
-# myhtml <- "https://www.dvpw.de/dvpw2024/programm/panels" %>% GET %>% content
+# myhtmltidygeocoder# myhtml <- "https://www.dvpw.de/dvpw2024/programm/panels" %>% GET %>% content
 
 # myhtml %>% write_html("myhtml.html")
 myhtml <- read_html("myhtml.html")
@@ -227,9 +229,34 @@ all_df$authors_on_paper_inv <- 1/all_df$authors_on_paper
 
 all_df %>% group_by(affil) %>% summarise(authors_on_paper_inv = sum(authors_on_paper_inv), m_authors_on_paper = mean(authors_on_paper)) %>% arrange(desc(authors_on_paper_inv)) %>% head(50) %>% View
 
-all_df %>% group_by(affil) %>% summarise(w_affil = n()) %>% arrange(desc(w_affil)) %>% head(50) %>% View
+all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(50) %>% View
+
+all_df %>% group_by(author) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(50) %>% View
+
+
 
 (all_df$affil %>% table %>% sort(decreasing = T))[1:50]
+
+
+
+
+
+affil_geo <- all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(100) 
+mycoords <- geo(affil_geo$affil)
+affil_geo <- merge(affil_geo, mycoords, by.x = "affil", by.y = "address", all.x = T)
+save(affil_geo, file = "affil_geo.RData")
+
+world <- ne_countries(scale = "medium", returnclass = "sf") # %>% filter(iso_a2_eh %in% c(country_analysis$country, "GB"," PT", "HR", "FR"))
+
+
+
+# world <- left_join(world, country_analysis, by = c("iso_a2_eh" = "country"), keep = T)
+
+ggplot(data = world, fill = NA) +
+  geom_sf() + xlim(c(5,16)) + ylim(c(46,56)) + 
+  geom_point(aes(x = long,y =  lat), data = affil_geo, size = affil_geo$n_affil*0.5, alpha = .5)
+  # geom_sf_label(aes(label = round(mean_vote_diff, 3)), color = "white") + xlab("") + ylab("")
+ggsave("map.pdf", width = 4*2^.5, height = 6, device = cairo_pdf)
 
 # Vorläufiges Panel-Programm (20.05.2024)
 # 
