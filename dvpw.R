@@ -227,12 +227,21 @@ all_df <- merge(all_df, affils_df, by = c("panel", "paper")) %>% merge(assignm_d
 all_df <- all_df %>% group_by(author) %>%  mutate(w_author = sum(1/authors_on_paper)) # %>% select(author, w_author)
 all_df$authors_on_paper_inv <- 1/all_df$authors_on_paper
 
+
+save(all_df, file = "all_df.RData")
+
+library(openxlsx)
+write_xlsx(all_df, "all_df.xlsx")
+
+# EVAL
+
 all_df %>% group_by(affil) %>% summarise(authors_on_paper_inv = sum(authors_on_paper_inv), m_authors_on_paper = mean(authors_on_paper)) %>% arrange(desc(authors_on_paper_inv)) %>% head(50) %>% View
 
 all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(50) %>% View
 
 all_df %>% group_by(author) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(50) %>% View
 
+save(all_df, file = "all_df.RData")
 
 
 (all_df$affil %>% table %>% sort(decreasing = T))[1:50]
