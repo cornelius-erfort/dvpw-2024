@@ -8,6 +8,7 @@ library(rvest)
 library(xml2)
 library(httr)
 library(tidygeocoder)
+library(gender)
 
 # myhtmltidygeocoder# myhtml <- "https://www.dvpw.de/dvpw2024/programm/panels" %>% GET %>% content
 
@@ -231,18 +232,57 @@ all_df$authors_on_paper_inv <- 1/all_df$authors_on_paper
 save(all_df, file = "all_df.RData")
 
 library(openxlsx)
-write_xlsx(all_df, "all_df.xlsx")
+write.xlsx(all_df, "dvpw_panels_2024.xlsx")
+save(all_df, file = "all_df.RData")
+
 
 # EVAL
 
 all_df %>% group_by(affil) %>% summarise(authors_on_paper_inv = sum(authors_on_paper_inv), m_authors_on_paper = mean(authors_on_paper)) %>% arrange(desc(authors_on_paper_inv)) %>% head(50) %>% View
 
-all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(50) %>% View
+all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(15) %>% View
 
-all_df %>% group_by(author) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(50) %>% View
+all_df %>% group_by(author) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(15) %>% View
 
-save(all_df, file = "all_df.RData")
+all_df %>% group_by(author) %>% summarise(n_affil = n()) %>% filter(n_affil == 3) %>% View
 
+# Get author first names
+all_df$author_first <- all_df$author %>% str_extract("^[A-Z][a-z]+")
+# all_df$author[is.na(all_df$author_first)]
+
+
+# Detect gender of first name using gender package
+# remotes::install_github("lmullen/genderdata")
+all_df$gender <- all_df$author_first %>% gender
+
+test <- all_df$author_first %>% gender
+table(test$gender)
+
+test <- test[!duplicated(test$name), ]
+table(test$gender)
+
+test2 <- merge(all_df, test, by.x = "author_first", by.y = "name", all.x = T)
+
+table(test2$gender)/nrow(test2[!is.na(test2$gender),])
+table(test2$gender[!is.na(test2$gender)], test2$assignm[!is.na(test2$gender)])  # , useNA = "ifany"
+# Show shares of gender within assignm
+
+
+test2$section <- test2$assignm %>% str_extract(".*?(?=,)")
+
+# ggplot
+test2 %>% filter(!is.na(gender)) %>%  group_by(section) %>% summarise(female = mean(gender == "female", na.rm = T), n = n()) %>% 
+ggplot(aes(x = section, y = female, size = n)) +
+  geom_point() + coord_flip() +
+  # Add horizontal line at 50%
+  geom_hline(yintercept = mean((filter(test2, !is.na(gender))$gender == "female"), na.rm = T)
+, linetype = "dashed")
+
+ggsave("gender_section.pdf", height = 4*2^.5, width = 10, device = cairo_pdf)
+
+
+all_df$affil %>% unique %>% length
+all_df$author %>% unique %>% length
 
 (all_df$affil %>% table %>% sort(decreasing = T))[1:50]
 
@@ -250,8 +290,14 @@ save(all_df, file = "all_df.RData")
 
 
 
-affil_geo <- all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) %>% head(100) 
+affil_geo <- all_df %>% group_by(affil) %>% summarise(n_affil = n()) %>% arrange(desc(n_affil)) # %>% head(100) 
 mycoords <- geo(affil_geo$affil)
+
+# Manually code viadrina
+# lat = 52.34229, long = 14.55402
+mycoords$lat[mycoords$address == "Europa-Universität Viadrina Frankfurt (Oder)"] <- 52.34229
+mycoords$long[mycoords$address == "Europa-Universität Viadrina Frankfurt (Oder)"] <- 14.55402
+
 affil_geo <- merge(affil_geo, mycoords, by.x = "affil", by.y = "address", all.x = T)
 save(affil_geo, file = "affil_geo.RData")
 
