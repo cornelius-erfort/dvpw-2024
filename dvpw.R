@@ -268,18 +268,20 @@ table(test2$gender[!is.na(test2$gender)], test2$assignm[!is.na(test2$gender)])  
 # Show shares of gender within assignm
 
 
-test2$section <- test2$assignm %>% str_extract(".*?(?=,)")
+test2$section <- test2$assignm %>% str_extract(".*?(?=,)") %>% str_remove("Sektion ")
 
 # ggplot
 test2 %>% filter(!is.na(gender)) %>%  group_by(section) %>% summarise(female = mean(gender == "female", na.rm = T), n = n()) %>% 
-ggplot(aes(x = section, y = female, size = n)) +
+ggplot(aes(x = fct_reorder(section, -female), y = female, size = n)) +
   geom_point() + coord_flip() +
   # Add horizontal line at 50%
-  geom_hline(yintercept = mean((filter(test2, !is.na(gender))$gender == "female"), na.rm = T)
-, linetype = "dashed")
+  geom_hline(yintercept = mean((filter(test2, !is.na(gender))$gender == "female"), na.rm = T), linetype = "dashed") + 
+  xlab("")
 
 ggsave("gender_section.pdf", height = 4*2^.5, width = 10, device = cairo_pdf)
+mean((filter(test2, !is.na(gender))$gender == "female"))
 
+test2 %>% group_by(author_first) %>% summarise(n = n()) %>% arrange(desc(n)) %>% head(15) %>% View
 
 all_df$affil %>% unique %>% length
 all_df$author %>% unique %>% length
