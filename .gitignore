@@ -1,6 +1,12 @@
-.Rproj.user
+
+# System/personal junk
+.DS_Store
+._*
 .Rhistory
-.RData
+.RHistory
 .Ruserdata
-.DS_Store
-.DS_Store
+.Rapp.history
+.Rproj.user/
+/.RData
+Rplots.pdf
+*.Rproj
